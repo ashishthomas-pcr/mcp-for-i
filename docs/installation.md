@@ -4,6 +4,7 @@
 - Node.js 18+ recommended
 - IBM i SSH access (22)
 - On Linux: `libsecret` (for keychain via `keytar`)
+- Works from PowerShell, `cmd`, Git Bash, Bash, Zsh, and WSL shells
 
 ## Install
 1. Clone or copy this repo
@@ -24,6 +25,7 @@ Open:
 - `http://127.0.0.1:3980`
 
 Use the UI to add/edit/delete/rename connections, manage keychain passwords, and run MCP/skills update actions.
+The UI no longer manages background startup or first-time install/repair flows; use normal npm commands for install/update outside the control plane.
 
 ## MCP (stdio) usage
 Configure your MCP client (e.g., Codex CLI) to run `mcp-for-i` via stdio. Example (pseudo-config):
@@ -45,6 +47,12 @@ If you run from source, use:
   "command": "node",
   "args": ["C:/Users/pgmashish/projects/mcp/mcp-for-i/dist/index.js"]
 }
+```
+
+For npm-installed package updates outside the UI:
+
+```bash
+npm i -g mcp-for-i@latest
 ```
 
 ## Logging (opt‑in)

@@ -120,9 +120,9 @@ async function routeRequest(
     return;
   }
 
-  if (method === "POST" && pathname === "/api/runtime/install") {
-    const job = await services.runtime.installOrRepair();
-    sendJson(res, 202, { job });
+  if (method === "GET" && pathname === "/api/runtime/environment") {
+    const environment = await services.runtime.getEnvironmentInfo();
+    sendJson(res, 200, { environment });
     return;
   }
 
@@ -138,24 +138,6 @@ async function routeRequest(
       repoUrl: typeof body.repoUrl === "string" ? body.repoUrl : undefined,
       branch: typeof body.branch === "string" ? body.branch : undefined
     });
-    sendJson(res, 202, { job });
-    return;
-  }
-
-  if (method === "GET" && pathname === "/api/runtime/autostart/status") {
-    const status = await services.runtime.getAutostartStatus();
-    sendJson(res, 200, { status });
-    return;
-  }
-
-  if (method === "POST" && pathname === "/api/runtime/autostart/setup") {
-    const job = await services.runtime.setupAutostart();
-    sendJson(res, 202, { job });
-    return;
-  }
-
-  if (method === "POST" && pathname === "/api/runtime/autostart/remove") {
-    const job = await services.runtime.removeAutostart();
     sendJson(res, 202, { job });
     return;
   }

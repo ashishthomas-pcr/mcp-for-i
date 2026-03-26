@@ -201,7 +201,7 @@ export function renderControlPlaneHtml() {
     <section class="header">
       <div>
         <h1>MCP-for-i Control Plane</h1>
-        <div class="sub">Secure IBM i onboarding, warm sessions, and update lifecycle.</div>
+        <div class="sub">Secure IBM i onboarding, warm sessions, and portable update flow.</div>
       </div>
       <div class="row">
         <div id="servicePill" class="status offline"><span class="dot"></span><span id="serviceText">Checking service...</span></div>
@@ -233,7 +233,7 @@ export function renderControlPlaneHtml() {
           <span class="badge unknown" id="skillsVersionBadge">Checking</span>
         </div>
         <div class="card">
-          <h3>Startup</h3>
+          <h3>Platform</h3>
           <div class="value" id="startupText">Checking...</div>
           <span class="badge unknown" id="startupBadge">Checking</span>
         </div>
@@ -278,7 +278,7 @@ export function renderControlPlaneHtml() {
     </section>
 
     <section class="panel" id="panel-runtime">
-      <div class="toolbar"><strong>Runtime Actions</strong></div>
+      <div class="toolbar"><strong>Updates</strong></div>
       <div class="fields">
         <div class="field">
           <label>Skills Repository URL</label>
@@ -290,16 +290,11 @@ export function renderControlPlaneHtml() {
         </div>
       </div>
       <div class="actions">
-        <button id="installBtn" type="button">Install or Repair MCP</button>
-        <button id="updateMcpBtn" class="secondary" type="button">Update MCP</button>
+        <button id="updateMcpBtn" type="button">Update MCP</button>
         <button id="updateSkillsBtn" class="secondary" type="button">Update Skills</button>
-      </div>
-      <div class="actions">
-        <button id="setupAutostartBtn" class="secondary" type="button">Enable Background Startup</button>
-        <button id="removeAutostartBtn" class="secondary" type="button">Disable Background Startup</button>
         <button id="refreshRuntimeBtn" class="secondary" type="button">Refresh Runtime</button>
       </div>
-      <div class="hint" id="autostartInfo">Startup status: checking...</div>
+      <div class="hint" id="autostartInfo">Environment: checking...</div>
       <div class="logs" id="logs">No jobs yet.</div>
     </section>
 
@@ -402,7 +397,7 @@ export function renderControlPlaneHtml() {
     const DEFAULT_SKILLS_BRANCH = "main";
     const LEGACY_SKILLS_REPO = "https://github.com/ashishthomas-pcr/mcp-for-i-skills.git";
     const CONTROL_BUTTONS = [
-      "installBtn", "updateMcpBtn", "updateSkillsBtn", "setupAutostartBtn", "removeAutostartBtn",
+      "updateMcpBtn", "updateSkillsBtn",
       "refreshOverviewBtn", "refreshRuntimeBtn", "saveSettingsBtn", "reloadSettingsBtn", "addConnectionBtn"
     ];
     const state = { online: false, busy: false, jobs: {}, connections: [], editingName: "" };
@@ -579,26 +574,18 @@ export function renderControlPlaneHtml() {
 
       if (data?.checkedAt) $("versionCheckedAt").textContent = "Last checked: " + data.checkedAt;
     }
-    function renderAutostart(status) {
-      if (!status) {
-        $("autostartInfo").textContent = "Startup status: unavailable";
+    function renderEnvironment(environment) {
+      if (!environment) {
+        $("autostartInfo").textContent = "Environment: unavailable";
         $("startupText").textContent = "Unavailable";
         setBadge("startupBadge", "Unknown", "unknown");
         return;
       }
-      if (status.supported === false) {
-        $("autostartInfo").textContent = "Startup status: not managed on " + status.platform + ". Running now: " + (status.running ? "yes" : "no") + ".";
-        $("startupText").textContent = "Not Managed";
-        setBadge("startupBadge", status.running ? "Running" : "Stopped", status.running ? "latest" : "unknown");
-        return;
-      }
-      const installed = status.installed ? "enabled" : "disabled";
-      const stateText = status.state ? (" (" + status.state + ")") : "";
-      $("autostartInfo").textContent = "Startup status: " + installed + stateText + ". Running now: " + (status.running ? "yes" : "no") + ".";
-      $("startupText").textContent = installed + stateText;
-      if (status.installed && status.running) setBadge("startupBadge", "Running", "latest");
-      else if (status.installed) setBadge("startupBadge", "Enabled", "update");
-      else setBadge("startupBadge", "Disabled", "unknown");
+      $("autostartInfo").textContent =
+        "Environment: " + environment.label + " (" + environment.arch + "). Command launch mode: portable. Update mode: " +
+        (environment.updateMode === "git-checkout" ? "git checkout" : "npm package") + ".";
+      $("startupText").textContent = environment.label + " (" + environment.arch + ")";
+      setBadge("startupBadge", environment.isWsl ? "WSL Ready" : "Portable", "latest");
     }
     function renderSessions(snapshot) {
       const body = $("sessionsBody");
@@ -638,7 +625,7 @@ export function renderControlPlaneHtml() {
     }
     async function loadConnections() { renderConnections((await api("/api/connections")).connections || []); }
     async function loadRuntimeStatus() { renderLogs((await api("/api/runtime/status")).jobs || {}); }
-    async function loadAutostartStatus() { renderAutostart((await api("/api/runtime/autostart/status")).status || null); }
+    async function loadEnvironment() { renderEnvironment((await api("/api/runtime/environment")).environment || null); }
     async function loadSessions() { renderSessions((await api("/api/sessions")).snapshot || null); }
     async function loadSettings() { renderSettings((await api("/api/settings")).settings || null); }
     async function loadVersions() {
@@ -757,7 +744,7 @@ export function renderControlPlaneHtml() {
         await loadRuntimeStatus();
         if (options.expectRestart) await beginReconnectFlow(options.label || "Update");
         else {
-          await Promise.allSettled([loadAutostartStatus(), loadVersions(), loadSessions()]);
+          await Promise.allSettled([loadEnvironment(), loadVersions(), loadSessions()]);
           startJobPolling();
         }
       } catch (err) {
@@ -778,7 +765,7 @@ export function renderControlPlaneHtml() {
           if (!running) {
             clearInterval(pollId);
             pollId = 0;
-            await Promise.allSettled([loadAutostartStatus(), loadVersions(), loadSessions()]);
+            await Promise.allSettled([loadEnvironment(), loadVersions(), loadSessions()]);
           }
         } catch {}
       }, 1800);
@@ -803,7 +790,7 @@ export function renderControlPlaneHtml() {
         return;
       }
       setServiceState("online", "Local control service online");
-      await Promise.allSettled([loadConnections(), loadRuntimeStatus(), loadAutostartStatus(), loadVersions(), loadSessions(), loadSettings()]);
+      await Promise.allSettled([loadConnections(), loadRuntimeStatus(), loadEnvironment(), loadVersions(), loadSessions(), loadSettings()]);
     }
 
     document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -815,14 +802,11 @@ export function renderControlPlaneHtml() {
     $("cancelConnectionBtn").addEventListener("click", closeConnectionDialog);
     $("closeConnectionDialogBtn").addEventListener("click", closeConnectionDialog);
     $("refreshOverviewBtn").addEventListener("click", refreshAll);
-    $("refreshRuntimeBtn").addEventListener("click", () => Promise.allSettled([loadRuntimeStatus(), loadAutostartStatus(), loadVersions(), loadSessions()]));
+    $("refreshRuntimeBtn").addEventListener("click", () => Promise.allSettled([loadRuntimeStatus(), loadEnvironment(), loadVersions(), loadSessions()]));
     $("saveSettingsBtn").addEventListener("click", saveSettings);
     $("reloadSettingsBtn").addEventListener("click", () => loadSettings().catch(() => {}));
-    $("installBtn").addEventListener("click", () => triggerJob("/api/runtime/install", null, { expectRestart: true, label: "Install or repair" }));
     $("updateMcpBtn").addEventListener("click", () => triggerJob("/api/runtime/update/mcp", null, { expectRestart: true, label: "MCP update" }));
     $("updateSkillsBtn").addEventListener("click", () => triggerJob("/api/runtime/update/skills", persistSkillsUpdateSettings()));
-    $("setupAutostartBtn").addEventListener("click", () => triggerJob("/api/runtime/autostart/setup"));
-    $("removeAutostartBtn").addEventListener("click", () => triggerJob("/api/runtime/autostart/remove"));
     $("skillsRepoUrl").addEventListener("change", () => { persistSkillsUpdateSettings(); loadVersions().catch(() => {}); });
     $("skillsBranch").addEventListener("change", () => { persistSkillsUpdateSettings(); loadVersions().catch(() => {}); });
 

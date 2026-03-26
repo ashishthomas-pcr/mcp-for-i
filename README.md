@@ -1,6 +1,6 @@
 # MCP-for-i
 
-`mcp-for-i` is a local MCP server + control plane for IBM i workflows. It provides secure connection onboarding, keychain-backed credentials, runtime update controls, and IBM i tools for agent-driven operations.
+`mcp-for-i` is a local MCP server + control plane for IBM i workflows. It provides secure connection onboarding, keychain-backed credentials, cross-platform runtime update controls, and IBM i tools for agent-driven operations.
 
 ## Install
 
@@ -17,6 +17,8 @@ mcp-for-i --help
 mcp-for-i-control help
 ```
 
+Supported shells and terminals include PowerShell, `cmd`, Git Bash, Bash, Zsh, and WSL shells, across Windows, macOS, and Linux.
+
 ## Quick Start
 
 1. Start the local control plane:
@@ -32,26 +34,6 @@ http://127.0.0.1:3980
 ```
 
 3. Add IBM i connection profiles in the UI. Passwords are stored in the OS keychain, not plain config.
-
-## Background Startup (Windows)
-
-Enable startup at login:
-
-```bash
-mcp-for-i-control setup
-```
-
-Check status:
-
-```bash
-mcp-for-i-control status
-```
-
-Disable startup:
-
-```bash
-mcp-for-i-control remove
-```
 
 ## Update and Version Management
 
@@ -79,19 +61,18 @@ Check current installed version:
 mcp-for-i --version
 ```
 
-## Control Plane Runtime Actions
+## Control Plane Updates
 
-In the UI, runtime buttons behave as follows:
+The control plane intentionally stays narrow:
 
-- `Install/Repair MCP`
-  - If running from a git checkout: runs local dependency repair/build.
-  - If running as npm-installed package: runs global npm install/repair for latest package.
 - `Update MCP`
   - If running from a git checkout: pulls latest changes from `origin/<current-branch>`, then installs/builds.
-  - If running as npm-installed package: upgrades global npm package to latest.
-  - On Windows global installs, update runs in a detached updater and briefly restarts control plane to avoid file-lock (`EBUSY`) errors.
+  - If running as an npm-installed package: upgrades the global npm package to latest.
+  - On Windows global installs, update still runs in a detached updater to avoid file-lock (`EBUSY`) errors during self-update.
 - `Update Skills`
-  - Pulls/clones the configured skills repository and branch into the local `skills` directory.
+  - Pulls or clones the configured skills repository and branch into the local `skills` directory.
+
+Install and background-startup management are no longer first-class UI actions. For package installs and manual upgrades, prefer standard npm commands such as `npm i -g mcp-for-i@latest`.
 
 ## Development (Git Checkout)
 
