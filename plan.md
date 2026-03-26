@@ -15,6 +15,8 @@ Build `mcp-for-i` into a production-grade IBM i agent platform where:
 4. Session idle timeout defaults to 30 minutes and extends on use.
 5. No IBM i-side service install is required.
 6. Cross-platform target; Windows-first acceptable if sequencing demands.
+7. Collaboration workflows must stay IDE-independent (`RDi`, VS Code, or any editor) by using local-workspace artifacts and sync semantics rather than editor-specific integrations.
+8. Source-management and promotion workflows must stay source-manager-agnostic and company-configurable, because dev/UAT/prod library movement, data copies, checkout rules, and promotion steps vary by shop.
 
 ## Phases
 
@@ -70,6 +72,11 @@ Build `mcp-for-i` into a production-grade IBM i agent platform where:
 ### Phase 9: Agent Skills + Safe Autonomy
 - Task-to-skill routing and safe autonomy controls.
 - Scoped learning/memory model with private and shared boundaries.
+- Add collaborative source workflows so IBM i members can be materialized into a local workspace, edited by developer tools and Codex, diffed, and synced back safely.
+- Preserve source metadata needed for RPG workflows (source type, dates where enabled, origin member path, and sync status).
+- Support source-manager-aware flows (for example TD/OMS-style checkout/build/promote actions) without forcing every developer to abandon existing tooling.
+- Keep the base workflow usable off the shelf without any source manager by supporting direct member/IFS collaboration plus optional company-specific workflow adapters.
+- Prefer companion MCPs for opinionated source-management products (for example a dedicated TD/OMS MCP) so `mcp-for-i` remains a neutral IBM i access/collaboration layer while workflow-specific behavior lives behind a separate adapter boundary.
 
 ### Phase 10: Packaging + Updater Distribution
 - Installer/updater across Windows/macOS/Linux.
@@ -87,4 +94,9 @@ Build `mcp-for-i` into a production-grade IBM i agent platform where:
 - Phase 5: complete (stateful TN5250 command session tools implemented: connect/read/set/send/wait/snapshot/disconnect, key handling, wait/retry loop, session snapshots, and guarded policy enforcement for interactive command execution)
 - Phase 6: complete (tamper-evident tool audit chain with verify/export/purge controls, journaling lifecycle across PF and IFS, QAUDJRN compliance event querying, receiver-retention automation with policy gates, and compliance report/bundle generation with optional signing)
 - Phase 7: complete (IBM i operations control expansion with spool hold/release/delete/move, job lifecycle controls, subsystem lifecycle/status tooling, message-queue send/read/reply workflows, lock + object-authority visibility, and data queue/data area operations)
+- Phase 9 foundation: complete (added `ibmi-mcp-universal` agent-agnostic skill pack with portable playbooks, tool grouping, error recovery guidance, and safety/cleanup conventions for non-Codex and Codex agents)
+- Collaborative source workflow planning (2026-03-25): identified the next gap as first-class local materialization/sync of IBM i source members so Codex can inspect/edit RPG sources while developers continue using their preferred IBM i/source-management workflow.
+- Workflow-boundary decision shaping (2026-03-25): dedicated source-manager MCPs are preferred over baking TD/OMS behavior into `mcp-for-i`; `mcp-for-i` should stay generic and interoperate with optional workflow MCPs.
+- Cross-platform runtime/security planning (2026-03-26): current config-path and keychain intent are already portable, but control-plane lifecycle and updater/autostart flows remain Windows-first. Next packaging/runtime work should introduce explicit platform adapters for autostart/update/install behavior, plus a credential-provider abstraction with ordered backends: native OS keychain first, then a local user-approved secret broker for headless/WSL cases, and only in-memory session fallback as a last resort.
+- Cross-platform credential decision shaping (2026-03-26): WSL/headless Linux should not depend on plaintext config or prompt-supplied passwords. Preferred design is to keep durable secrets in the host/native OS trust store when available (Windows Credential Manager, macOS Keychain, Linux Secret Service/libsecret) and support a local broker/device-flow style handoff for environments without a usable desktop keychain.
 - Phase 8-10: pending

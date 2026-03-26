@@ -1,0 +1,4 @@
+interface:
+  display_name: "IBM i MCP Universal"
+  short_description: "Agent-agnostic IBM i task playbooks for mcp-for-i"
+  default_prompt: "Use this skill to execute IBM i tasks through mcp-for-i with safe preflight, deterministic playbooks, guarded approvals, verification, and cleanup."

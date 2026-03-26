@@ -1,0 +1,16 @@
+{
+  "name": "mcp-for-i-skills",
+  "version": "0.1.0",
+  "skills": [
+    {
+      "id": "ibmi-mcp-operations",
+      "path": "ibmi-mcp-operations",
+      "description": "IBM i workflows for connect, compile, diagnostics, deploy and procedure calls"
+    },
+    {
+      "id": "ibmi-mcp-universal",
+      "path": "ibmi-mcp-universal",
+      "description": "Universal, agent-agnostic IBM i playbooks for mcp-for-i tools (session, QSYS, IFS, SQL/CL, operations control, audit/journaling, cleanup)"
+    }
+  ]
+}

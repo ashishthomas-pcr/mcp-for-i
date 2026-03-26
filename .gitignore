@@ -3,5 +3,3 @@ node_modules/
 dist/
 *.log
 skills.backup-*/
-skills/README.md
-skills/manifest.json
