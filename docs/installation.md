@@ -7,25 +7,32 @@
 - Works from PowerShell, `cmd`, Git Bash, Bash, Zsh, and WSL shells
 
 ## Install
-1. Clone or copy this repo
-2. Install dependencies:
+1. Clone or copy this repo for git-checkout usage, or install globally for npm usage
+2. For git-checkout usage, install dependencies:
    - `npm install`
 3. Build:
    - `npm run build`
-4. Run:
+4. Run MCP from source:
    - `node dist/index.js`
 
-## Control Plane UI (Onboarding + Updates)
-Run local control plane:
+For npm/global usage:
 
-- `npm run start:controlplane`
+```bash
+npm i -g mcp-for-i
+```
+
+## Control Plane UI (Onboarding + Updates)
+Preferred command from npm or a git checkout build:
+
+- `mcp-for-i control`
 
 Open:
 
 - `http://127.0.0.1:3980`
 
-Use the UI to add/edit/delete/rename connections, manage keychain passwords, and run MCP/skills update actions.
-The UI no longer manages background startup or first-time install/repair flows; use normal npm commands for install/update outside the control plane.
+`mcp-for-i control` starts the control plane in the background if needed, then opens the UI when possible. In headless environments it prints the URL instead.
+
+Use the UI to add/edit/delete/rename connections, manage keychain passwords, manage background-service status, and run MCP/skills update actions.
 
 ## MCP (stdio) usage
 Configure your MCP client (e.g., Codex CLI) to run `mcp-for-i` via stdio. Example (pseudo-config):
@@ -54,6 +61,22 @@ For npm-installed package updates outside the UI:
 ```bash
 npm i -g mcp-for-i@latest
 ```
+
+## Background Service Management
+
+The control plane supports explicit background-service registration:
+
+```bash
+mcp-for-i control status
+mcp-for-i control enable
+mcp-for-i control disable
+```
+
+Platform behavior:
+- Windows: Startup entry
+- macOS: LaunchAgent
+- Linux: user `systemd` service when available
+- WSL: guarded `.bashrc` hook that starts the control plane on interactive Bash launch
 
 ## Logging (opt‑in)
 Logging is **disabled by default**. Enable it via env vars or CLI flags:

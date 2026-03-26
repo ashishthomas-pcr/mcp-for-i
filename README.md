@@ -21,19 +21,48 @@ Supported shells and terminals include PowerShell, `cmd`, Git Bash, Bash, Zsh, a
 
 ## Quick Start
 
-1. Start the local control plane:
+1. Open the local control plane:
 
 ```bash
-mcp-for-i-control serve
+mcp-for-i control
 ```
 
-2. Open the UI at:
+`mcp-for-i control` will start the control server in the background if needed, then open the UI. If a browser cannot be opened in the current environment, it prints the local URL instead.
+
+2. The default local UI URL is:
 
 ```text
 http://127.0.0.1:3980
 ```
 
 3. Add IBM i connection profiles in the UI. Passwords are stored in the OS keychain, not plain config.
+
+## Control Commands
+
+From an npm install or a git checkout build, these commands are the supported control entrypoints:
+
+```bash
+mcp-for-i control
+mcp-for-i control status
+mcp-for-i control enable
+mcp-for-i control disable
+```
+
+Equivalent direct control-plane binary commands:
+
+```bash
+mcp-for-i-control open
+mcp-for-i-control status
+mcp-for-i-control enable
+mcp-for-i-control disable
+mcp-for-i-control serve
+```
+
+Behavior by environment:
+- Windows: `enable` registers a Startup entry.
+- macOS: `enable` registers a LaunchAgent.
+- Linux: `enable` uses a user `systemd` service when available.
+- WSL: `enable` installs a guarded `.bashrc` hook that starts the control plane on interactive Bash shell launch.
 
 ## Update and Version Management
 
@@ -72,7 +101,7 @@ The control plane intentionally stays narrow:
 - `Update Skills`
   - Pulls or clones the configured skills repository and branch into the local `skills` directory.
 
-Install and background-startup management are no longer first-class UI actions. For package installs and manual upgrades, prefer standard npm commands such as `npm i -g mcp-for-i@latest`.
+For npm installs and manual upgrades, prefer standard npm commands such as `npm i -g mcp-for-i@latest`.
 
 ## Development (Git Checkout)
 
@@ -83,6 +112,14 @@ npm install
 npm run build
 npm test
 npm run start:controlplane
+```
+
+You can also use the built artifacts directly after build:
+
+```bash
+node dist/index.js
+node dist/index.js control
+node dist/controlplane/index.js open
 ```
 
 ## Automated Release (No Manual Version Bump)

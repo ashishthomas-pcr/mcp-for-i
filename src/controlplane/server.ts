@@ -126,6 +126,24 @@ async function routeRequest(
     return;
   }
 
+  if (method === "GET" && pathname === "/api/service/status") {
+    const status = await services.runtime.getServiceStatus();
+    sendJson(res, 200, { status });
+    return;
+  }
+
+  if (method === "POST" && pathname === "/api/service/enable") {
+    const job = await services.runtime.enableService();
+    sendJson(res, 202, { job });
+    return;
+  }
+
+  if (method === "POST" && pathname === "/api/service/disable") {
+    const job = await services.runtime.disableService();
+    sendJson(res, 202, { job });
+    return;
+  }
+
   if (method === "POST" && pathname === "/api/runtime/update/mcp") {
     const job = await services.runtime.updateMcp();
     sendJson(res, 202, { job });

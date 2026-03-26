@@ -233,7 +233,7 @@ export function renderControlPlaneHtml() {
           <span class="badge unknown" id="skillsVersionBadge">Checking</span>
         </div>
         <div class="card">
-          <h3>Platform</h3>
+          <h3>Background Service</h3>
           <div class="value" id="startupText">Checking...</div>
           <span class="badge unknown" id="startupBadge">Checking</span>
         </div>
@@ -292,9 +292,11 @@ export function renderControlPlaneHtml() {
       <div class="actions">
         <button id="updateMcpBtn" type="button">Update MCP</button>
         <button id="updateSkillsBtn" class="secondary" type="button">Update Skills</button>
+        <button id="enableServiceBtn" class="secondary" type="button">Enable Background Service</button>
+        <button id="disableServiceBtn" class="secondary" type="button">Disable Background Service</button>
         <button id="refreshRuntimeBtn" class="secondary" type="button">Refresh Runtime</button>
       </div>
-      <div class="hint" id="autostartInfo">Environment: checking...</div>
+      <div class="hint" id="autostartInfo">Background service: checking...</div>
       <div class="logs" id="logs">No jobs yet.</div>
     </section>
 
@@ -397,7 +399,7 @@ export function renderControlPlaneHtml() {
     const DEFAULT_SKILLS_BRANCH = "main";
     const LEGACY_SKILLS_REPO = "https://github.com/ashishthomas-pcr/mcp-for-i-skills.git";
     const CONTROL_BUTTONS = [
-      "updateMcpBtn", "updateSkillsBtn",
+      "updateMcpBtn", "updateSkillsBtn", "enableServiceBtn", "disableServiceBtn",
       "refreshOverviewBtn", "refreshRuntimeBtn", "saveSettingsBtn", "reloadSettingsBtn", "addConnectionBtn"
     ];
     const state = { online: false, busy: false, jobs: {}, connections: [], editingName: "" };
@@ -574,18 +576,28 @@ export function renderControlPlaneHtml() {
 
       if (data?.checkedAt) $("versionCheckedAt").textContent = "Last checked: " + data.checkedAt;
     }
-    function renderEnvironment(environment) {
-      if (!environment) {
-        $("autostartInfo").textContent = "Environment: unavailable";
+    function renderService(status) {
+      if (!status) {
+        $("autostartInfo").textContent = "Background service: unavailable";
         $("startupText").textContent = "Unavailable";
         setBadge("startupBadge", "Unknown", "unknown");
         return;
       }
-      $("autostartInfo").textContent =
-        "Environment: " + environment.label + " (" + environment.arch + "). Command launch mode: portable. Update mode: " +
-        (environment.updateMode === "git-checkout" ? "git checkout" : "npm package") + ".";
-      $("startupText").textContent = environment.label + " (" + environment.arch + ")";
-      setBadge("startupBadge", environment.isWsl ? "WSL Ready" : "Portable", "latest");
+      const enabledText = status.enabled ? "enabled" : "disabled";
+      const runningText = status.running ? "running" : "stopped";
+      $("startupText").textContent = enabledText + " (" + runningText + ")";
+
+      if (status.enabled && status.running) setBadge("startupBadge", "Running", "latest");
+      else if (status.enabled) setBadge("startupBadge", "Enabled", "update");
+      else setBadge("startupBadge", "Disabled", "unknown");
+
+      const detail = [
+        "Platform: " + status.label + " (" + status.arch + ").",
+        "Managed by: " + status.managedBy + ".",
+        status.detail ? status.detail : "",
+        status.target ? ("Target: " + status.target + ".") : ""
+      ].filter(Boolean).join(" ");
+      $("autostartInfo").textContent = detail;
     }
     function renderSessions(snapshot) {
       const body = $("sessionsBody");
@@ -625,7 +637,7 @@ export function renderControlPlaneHtml() {
     }
     async function loadConnections() { renderConnections((await api("/api/connections")).connections || []); }
     async function loadRuntimeStatus() { renderLogs((await api("/api/runtime/status")).jobs || {}); }
-    async function loadEnvironment() { renderEnvironment((await api("/api/runtime/environment")).environment || null); }
+    async function loadServiceStatus() { renderService((await api("/api/service/status")).status || null); }
     async function loadSessions() { renderSessions((await api("/api/sessions")).snapshot || null); }
     async function loadSettings() { renderSettings((await api("/api/settings")).settings || null); }
     async function loadVersions() {
@@ -731,11 +743,11 @@ export function renderControlPlaneHtml() {
           return;
         }
       }
-      setServiceState("offline", "Service offline. Start with mcp-for-i-control serve.");
+      setServiceState("offline", "Service offline. Start with mcp-for-i control.");
     }
     async function triggerJob(path, payload, options = {}) {
       if (!state.online) {
-        alert("Control plane is offline. Start it with mcp-for-i-control serve.");
+        alert("Control plane is offline. Start it with mcp-for-i control.");
         return;
       }
       setBusy(true);
@@ -744,7 +756,7 @@ export function renderControlPlaneHtml() {
         await loadRuntimeStatus();
         if (options.expectRestart) await beginReconnectFlow(options.label || "Update");
         else {
-          await Promise.allSettled([loadEnvironment(), loadVersions(), loadSessions()]);
+          await Promise.allSettled([loadServiceStatus(), loadVersions(), loadSessions()]);
           startJobPolling();
         }
       } catch (err) {
@@ -765,7 +777,7 @@ export function renderControlPlaneHtml() {
           if (!running) {
             clearInterval(pollId);
             pollId = 0;
-            await Promise.allSettled([loadEnvironment(), loadVersions(), loadSessions()]);
+            await Promise.allSettled([loadServiceStatus(), loadVersions(), loadSessions()]);
           }
         } catch {}
       }, 1800);
@@ -786,11 +798,11 @@ export function renderControlPlaneHtml() {
     async function refreshAll() {
       const healthy = await pingHealth();
       if (!healthy) {
-        setServiceState("offline", "Service offline. Start with mcp-for-i-control serve.");
+        setServiceState("offline", "Service offline. Start with mcp-for-i control.");
         return;
       }
       setServiceState("online", "Local control service online");
-      await Promise.allSettled([loadConnections(), loadRuntimeStatus(), loadEnvironment(), loadVersions(), loadSessions(), loadSettings()]);
+      await Promise.allSettled([loadConnections(), loadRuntimeStatus(), loadServiceStatus(), loadVersions(), loadSessions(), loadSettings()]);
     }
 
     document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -802,11 +814,13 @@ export function renderControlPlaneHtml() {
     $("cancelConnectionBtn").addEventListener("click", closeConnectionDialog);
     $("closeConnectionDialogBtn").addEventListener("click", closeConnectionDialog);
     $("refreshOverviewBtn").addEventListener("click", refreshAll);
-    $("refreshRuntimeBtn").addEventListener("click", () => Promise.allSettled([loadRuntimeStatus(), loadEnvironment(), loadVersions(), loadSessions()]));
+    $("refreshRuntimeBtn").addEventListener("click", () => Promise.allSettled([loadRuntimeStatus(), loadServiceStatus(), loadVersions(), loadSessions()]));
     $("saveSettingsBtn").addEventListener("click", saveSettings);
     $("reloadSettingsBtn").addEventListener("click", () => loadSettings().catch(() => {}));
     $("updateMcpBtn").addEventListener("click", () => triggerJob("/api/runtime/update/mcp", null, { expectRestart: true, label: "MCP update" }));
     $("updateSkillsBtn").addEventListener("click", () => triggerJob("/api/runtime/update/skills", persistSkillsUpdateSettings()));
+    $("enableServiceBtn").addEventListener("click", () => triggerJob("/api/service/enable"));
+    $("disableServiceBtn").addEventListener("click", () => triggerJob("/api/service/disable"));
     $("skillsRepoUrl").addEventListener("change", () => { persistSkillsUpdateSettings(); loadVersions().catch(() => {}); });
     $("skillsBranch").addEventListener("change", () => { persistSkillsUpdateSettings(); loadVersions().catch(() => {}); });
 

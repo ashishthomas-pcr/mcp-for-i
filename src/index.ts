@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import crypto from "crypto";
+import { fileURLToPath } from "url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -8,6 +9,23 @@ import { McpContext } from "./mcp/context.js";
 import { log } from "./mcp/logger.js";
 import { validateToolInput } from "./mcp/validation.js";
 import { appendAuditRecord } from "./mcp/audit.js";
+import { runControlCommand } from "./controlplane/commands.js";
+
+const argv = process.argv.slice(2);
+const firstArg = (argv[0] || "").toLowerCase();
+
+if (firstArg === "control") {
+  await runControlCommand(argv.slice(1), {
+    defaultCommand: "open",
+    scriptPath: fileURLToPath(new URL("./controlplane/index.js", import.meta.url))
+  });
+  process.exit(0);
+}
+
+if (firstArg === "--help" || firstArg === "-h" || firstArg === "help") {
+  printHelp();
+  process.exit(0);
+}
 
 const server = new Server(
   { name: "mcp-for-i", version: "0.1.8" },
@@ -114,4 +132,13 @@ async function safeAppendAudit(input: Parameters<typeof appendAuditRecord>[0]) {
   } catch (err: any) {
     log("warn", "audit.append.failed", { error: err?.message || String(err) });
   }
+}
+
+function printHelp() {
+  process.stderr.write(`mcp-for-i usage:\n`);
+  process.stderr.write(`  mcp-for-i                 Start MCP stdio server\n`);
+  process.stderr.write(`  mcp-for-i control         Start/open control plane UI\n`);
+  process.stderr.write(`  mcp-for-i control status  Show control plane and background-service status\n`);
+  process.stderr.write(`  mcp-for-i control enable  Enable background service for this platform\n`);
+  process.stderr.write(`  mcp-for-i control disable Disable background service for this platform\n`);
 }

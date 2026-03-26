@@ -4,6 +4,11 @@ import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getPlatformDescriptor } from "./platform.js";
+import {
+  disableBackgroundService,
+  enableBackgroundService,
+  getServiceStatus
+} from "./serviceManager.js";
 
 type JobStatus = "idle" | "running" | "success" | "failed";
 
@@ -19,6 +24,8 @@ export type RuntimeJob = {
 type RuntimeState = {
   updateMcp: RuntimeJob;
   updateSkills: RuntimeJob;
+  enableService: RuntimeJob;
+  disableService: RuntimeJob;
 };
 
 type UpdateSkillsOptions = {
@@ -53,7 +60,9 @@ type RuntimeEnvironment = ReturnType<typeof getPlatformDescriptor> & {
 export class RuntimeService {
   private readonly state: RuntimeState = {
     updateMcp: makeJob("updateMcp"),
-    updateSkills: makeJob("updateSkills")
+    updateSkills: makeJob("updateSkills"),
+    enableService: makeJob("enableService"),
+    disableService: makeJob("disableService")
   };
 
   constructor(private readonly rootDir: string) {}
@@ -181,6 +190,27 @@ export class RuntimeService {
       commandMode: "portable",
       updateMode: await this.detectExecutionModeQuiet()
     };
+  }
+
+  async getServiceStatus() {
+    return getServiceStatus(this.getControlPlaneScriptPath(), process.execPath);
+  }
+
+  async enableService() {
+    return this.runJob("enableService", async push => {
+      const status = await enableBackgroundService(this.getControlPlaneScriptPath(), process.execPath);
+      push(`Enabled background service via ${status.managedBy}.`);
+      if (status.target) push(`Target: ${status.target}`);
+      if (status.detail) push(status.detail);
+    });
+  }
+
+  async disableService() {
+    return this.runJob("disableService", async push => {
+      const status = await disableBackgroundService(this.getControlPlaneScriptPath(), process.execPath);
+      push(`Disabled background service (${status.managedBy}).`);
+      if (status.target) push(`Target: ${status.target}`);
+    });
   }
 
   private async runJob(kind: keyof RuntimeState, fn: (push: (line: string) => void) => Promise<void>) {
@@ -335,7 +365,7 @@ export class RuntimeService {
   }
 
   private async scheduleWindowsSelfUpdate(push: (line: string) => void, action: "install" | "update") {
-    const controlPlaneScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "index.js");
+    const controlPlaneScript = this.getControlPlaneScriptPath();
     const jobId = `${Date.now()}-${process.pid}`;
     const logPath = path.join(os.tmpdir(), `${PACKAGE_NAME}-${action}-${jobId}.log`);
     const scriptPath = path.join(os.tmpdir(), `${PACKAGE_NAME}-${action}-${jobId}.cmd`);
@@ -463,6 +493,10 @@ export class RuntimeService {
         }
       });
     });
+  }
+
+  private getControlPlaneScriptPath() {
+    return path.join(path.dirname(fileURLToPath(import.meta.url)), "index.js");
   }
 }
 
