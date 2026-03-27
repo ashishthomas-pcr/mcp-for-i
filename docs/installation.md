@@ -34,6 +34,13 @@ Open:
 
 Use the UI to add/edit/delete/rename connections, manage keychain passwords, manage background-service status, and run MCP/skills update actions.
 
+The `Clients` tab can also add `mcp-for-i` directly to supported local coding clients:
+- Codex Desktop / CLI
+- Claude Code, when the `claude` command is installed
+- VS Code / GitHub Copilot, when the `code` command is installed
+
+For unsupported or not-installed clients such as Project Bob, the UI shows ready-to-copy manual instructions.
+
 ## MCP (stdio) usage
 Configure your MCP client (e.g., Codex CLI) to run `mcp-for-i` via stdio. Example (pseudo-config):
 

@@ -213,6 +213,7 @@ export function renderControlPlaneHtml() {
       <button class="tab-btn active" type="button" data-tab="overview">Overview</button>
       <button class="tab-btn" type="button" data-tab="connections">Connections</button>
       <button class="tab-btn" type="button" data-tab="runtime">Runtime</button>
+      <button class="tab-btn" type="button" data-tab="clients">Clients</button>
       <button class="tab-btn" type="button" data-tab="settings">Settings</button>
     </section>
 
@@ -298,6 +299,18 @@ export function renderControlPlaneHtml() {
       </div>
       <div class="hint" id="autostartInfo">Background service: checking...</div>
       <div class="logs" id="logs">No jobs yet.</div>
+    </section>
+
+    <section class="panel" id="panel-clients">
+      <div class="toolbar">
+        <div>
+          <strong>Add To Coding Client</strong>
+          <div class="hint" id="clientSummary">Checking available clients...</div>
+        </div>
+        <button id="refreshClientsBtn" class="secondary" type="button">Refresh Clients</button>
+      </div>
+      <div class="actions" id="clientButtons"></div>
+      <div class="logs" id="clientLogs">No client actions yet.</div>
     </section>
 
     <section class="panel" id="panel-settings">
@@ -414,6 +427,7 @@ export function renderControlPlaneHtml() {
         const el = $(id);
         if (el) el.disabled = disabled;
       }
+      document.querySelectorAll("#clientButtons button").forEach(btn => btn.disabled = disabled);
     }
     function setBusy(busy) {
       state.busy = busy;
@@ -599,6 +613,27 @@ export function renderControlPlaneHtml() {
       ].filter(Boolean).join(" ");
       $("autostartInfo").textContent = detail;
     }
+    function renderClients(targets) {
+      const list = Array.isArray(targets) ? targets : [];
+      $("clientSummary").textContent = list.length
+        ? list.filter(t => t.autoInstall && t.available).length + " auto-add targets available."
+        : "No client integrations detected.";
+      const host = $("clientButtons");
+      host.innerHTML = "";
+      for (const target of list) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = target.autoInstall && target.available ? "" : "secondary";
+        btn.textContent = target.autoInstall
+          ? ((target.configured ? "Re-check " : "Add to ") + target.label)
+          : target.label;
+        btn.title = target.description + (target.details ? (" " + target.details) : "");
+        btn.dataset.clientId = target.id;
+        btn.disabled = !state.online || state.busy;
+        btn.addEventListener("click", () => installClient(target.id));
+        host.appendChild(btn);
+      }
+    }
     function renderSessions(snapshot) {
       const body = $("sessionsBody");
       body.innerHTML = "";
@@ -638,6 +673,7 @@ export function renderControlPlaneHtml() {
     async function loadConnections() { renderConnections((await api("/api/connections")).connections || []); }
     async function loadRuntimeStatus() { renderLogs((await api("/api/runtime/status")).jobs || {}); }
     async function loadServiceStatus() { renderService((await api("/api/service/status")).status || null); }
+    async function loadClients() { renderClients((await api("/api/clients")).targets || []); }
     async function loadSessions() { renderSessions((await api("/api/sessions")).snapshot || null); }
     async function loadSettings() { renderSettings((await api("/api/settings")).settings || null); }
     async function loadVersions() {
@@ -766,6 +802,28 @@ export function renderControlPlaneHtml() {
         setBusy(false);
       }
     }
+    async function installClient(id) {
+      if (!state.online) {
+        alert("Control plane is offline. Start it with mcp-for-i control.");
+        return;
+      }
+      setBusy(true);
+      try {
+        const response = await api("/api/clients/install", {
+          method: "POST",
+          body: JSON.stringify({ id })
+        });
+        const result = response?.result || {};
+        const lines = [result.label || id, result.message || ""];
+        for (const line of result.output || []) lines.push(line);
+        $("clientLogs").textContent = lines.filter(Boolean).join("\\n");
+        await loadClients();
+      } catch (err) {
+        $("clientLogs").textContent = "Client setup failed: " + (err?.message || String(err));
+      } finally {
+        setBusy(false);
+      }
+    }
     let pollId = 0;
     function startJobPolling() {
       if (pollId) return;
@@ -802,7 +860,7 @@ export function renderControlPlaneHtml() {
         return;
       }
       setServiceState("online", "Local control service online");
-      await Promise.allSettled([loadConnections(), loadRuntimeStatus(), loadServiceStatus(), loadVersions(), loadSessions(), loadSettings()]);
+      await Promise.allSettled([loadConnections(), loadRuntimeStatus(), loadServiceStatus(), loadVersions(), loadSessions(), loadSettings(), loadClients()]);
     }
 
     document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -815,6 +873,7 @@ export function renderControlPlaneHtml() {
     $("closeConnectionDialogBtn").addEventListener("click", closeConnectionDialog);
     $("refreshOverviewBtn").addEventListener("click", refreshAll);
     $("refreshRuntimeBtn").addEventListener("click", () => Promise.allSettled([loadRuntimeStatus(), loadServiceStatus(), loadVersions(), loadSessions()]));
+    $("refreshClientsBtn").addEventListener("click", () => loadClients().catch(() => {}));
     $("saveSettingsBtn").addEventListener("click", saveSettings);
     $("reloadSettingsBtn").addEventListener("click", () => loadSettings().catch(() => {}));
     $("updateMcpBtn").addEventListener("click", () => triggerJob("/api/runtime/update/mcp", null, { expectRestart: true, label: "MCP update" }));

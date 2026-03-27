@@ -64,6 +64,19 @@ Behavior by environment:
 - Linux: `enable` uses a user `systemd` service when available.
 - WSL: `enable` installs a guarded `.bashrc` hook that starts the control plane on interactive Bash shell launch.
 
+## Add To Coding Clients
+
+The control-plane UI now includes a `Clients` tab with one-click setup for:
+- `Codex Desktop / CLI`
+- `Claude Code` when the `claude` CLI is installed
+- `VS Code / GitHub Copilot` when the `code` CLI is installed
+
+It also includes manual guidance for:
+- `Project Bob`
+- other MCP clients that use generic JSON/TOML stdio server configuration
+
+The UI writes or invokes the local client-specific setup on the same machine where the control plane is running. If a client CLI is not installed, the UI falls back to showing the exact launch command/snippet to use manually.
+
 ## Update and Version Management
 
 Update to latest globally:

@@ -8,6 +8,7 @@ import { ConfigStore, Settings, getConfigDir } from "../config/store.js";
 import { isKeychainAvailable } from "../security/credentialStore.js";
 import { ConnectionService } from "./connectionService.js";
 import { RuntimeService } from "./runtimeService.js";
+import { ClientIntegrationService } from "./clientIntegrationService.js";
 import { renderControlPlaneHtml } from "./ui.js";
 
 export type ControlPlaneServer = {
@@ -24,10 +25,11 @@ export async function startControlPlaneServer(opts?: { host?: string; port?: num
   const store = new ConfigStore();
   const connections = new ConnectionService(store);
   const runtime = new RuntimeService(rootDir);
+  const clients = new ClientIntegrationService(rootDir);
 
   const server = http.createServer(async (req, res) => {
     try {
-      await routeRequest(req, res, { store, connections, runtime });
+      await routeRequest(req, res, { store, connections, runtime, clients });
     } catch (err: any) {
       sendJson(res, 500, { error: err?.message || String(err) });
     }
@@ -51,7 +53,7 @@ export async function startControlPlaneServer(opts?: { host?: string; port?: num
 async function routeRequest(
   req: IncomingMessage,
   res: ServerResponse,
-  services: { store: ConfigStore; connections: ConnectionService; runtime: RuntimeService }
+  services: { store: ConfigStore; connections: ConnectionService; runtime: RuntimeService; clients: ClientIntegrationService }
 ) {
   const method = req.method || "GET";
   const url = new URL(req.url || "/", "http://127.0.0.1");
@@ -129,6 +131,24 @@ async function routeRequest(
   if (method === "GET" && pathname === "/api/service/status") {
     const status = await services.runtime.getServiceStatus();
     sendJson(res, 200, { status });
+    return;
+  }
+
+  if (method === "GET" && pathname === "/api/clients") {
+    const targets = await services.clients.listTargets();
+    sendJson(res, 200, { targets });
+    return;
+  }
+
+  if (method === "POST" && pathname === "/api/clients/install") {
+    const body = await readJson(req);
+    const id = String(body.id || "").trim();
+    if (!id) {
+      sendJson(res, 400, { error: "id is required" });
+      return;
+    }
+    const result = await services.clients.installTarget(id);
+    sendJson(res, 200, { result });
     return;
   }
 
