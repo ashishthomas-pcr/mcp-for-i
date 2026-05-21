@@ -4,6 +4,8 @@
 
 ## Install
 
+The npm package name is `mcp-for-i`.
+
 Install globally from npm:
 
 ```bash
@@ -141,7 +143,16 @@ node dist/controlplane/index.js open
 
 ## Automated Release (No Manual Version Bump)
 
-Use the release script instead of raw `npm publish`.
+Use the release script instead of raw `npm publish`. The script publishes the `mcp-for-i` npm package.
+
+Before releasing, verify npm auth and the currently published version:
+
+```bash
+npm whoami
+npm view mcp-for-i version
+```
+
+If `npm whoami` fails, run `npm login` first.
 
 Patch release:
 
@@ -176,6 +187,8 @@ npm run release:patch -- --skip-tests
 npm run release:patch -- --otp=123456
 npm run release:patch -- --no-push
 ```
+
+OTP is only needed when the npm account has two-factor authentication enabled for publishing. If npm asks for a one-time password, use the current code from the authenticator app or recovery method configured on the npm account, then rerun with `--otp=<code>`. If the account does not have publish-time 2FA enabled, no OTP is needed.
 
 ## Security Model
 
