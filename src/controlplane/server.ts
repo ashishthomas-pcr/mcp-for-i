@@ -5,7 +5,7 @@ import path from "path";
 import { URL } from "url";
 import { fileURLToPath } from "url";
 import { ConfigStore, Settings, getConfigDir } from "../config/store.js";
-import { isKeychainAvailable } from "../security/credentialStore.js";
+import { getCredentialStoreStatus } from "../security/credentialStore.js";
 import { ConnectionService } from "./connectionService.js";
 import { RuntimeService } from "./runtimeService.js";
 import { ClientIntegrationService } from "./clientIntegrationService.js";
@@ -66,7 +66,8 @@ async function routeRequest(
   }
 
   if (method === "GET" && pathname === "/api/health") {
-    sendJson(res, 200, { ok: true, keychainAvailable: await isKeychainAvailable() });
+    const credentialStore = await getCredentialStoreStatus();
+    sendJson(res, 200, { ok: true, keychainAvailable: credentialStore.keychainAvailable, credentialStore });
     return;
   }
 

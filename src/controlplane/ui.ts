@@ -125,6 +125,22 @@ export function renderControlPlaneHtml() {
     .badge.latest { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
     .badge.update { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
     .badge.unknown { color: var(--muted); }
+    .notice {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface-2);
+      padding: 10px;
+      margin: 10px 0;
+      color: var(--muted);
+    }
+    .notice.warning {
+      color: var(--warn);
+      border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
+    }
+    .notice.success {
+      color: var(--ok);
+      border-color: color-mix(in srgb, var(--ok) 40%, var(--line));
+    }
     .fields { display: grid; gap: 9px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .field label {
       display: block; margin-bottom: 5px;
@@ -239,6 +255,7 @@ export function renderControlPlaneHtml() {
           <span class="badge unknown" id="startupBadge">Checking</span>
         </div>
       </div>
+      <div id="credentialNotice" class="notice">Credential store: checking...</div>
       <div id="versionCheckedAt" class="hint"></div>
       <h3 style="margin: 12px 0 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);">Session Snapshot</h3>
       <table>
@@ -613,6 +630,16 @@ export function renderControlPlaneHtml() {
       ].filter(Boolean).join(" ");
       $("autostartInfo").textContent = detail;
     }
+    function renderCredentialStore(status) {
+      const el = $("credentialNotice");
+      if (!status) {
+        el.textContent = "Credential store: unavailable.";
+        el.className = "notice warning";
+        return;
+      }
+      el.textContent = "Credential store: " + status.message;
+      el.className = "notice " + (status.persistent ? "success" : "warning");
+    }
     function renderClients(targets) {
       const list = Array.isArray(targets) ? targets : [];
       $("clientSummary").textContent = list.length
@@ -665,6 +692,7 @@ export function renderControlPlaneHtml() {
         const res = await fetch("/api/health", { cache: "no-store" });
         if (!res.ok) return false;
         const data = await res.json();
+        renderCredentialStore(data?.credentialStore || null);
         return Boolean(data?.ok);
       } catch {
         return false;

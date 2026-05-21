@@ -37,6 +37,10 @@ http://127.0.0.1:3980
 
 3. Add IBM i connection profiles in the UI. Passwords are stored in the OS keychain, not plain config.
 
+WSL note: persistent password storage requires a working Linux Secret Service inside the WSL distro. WSL does not automatically use Windows Credential Manager; when no keychain is available, MCP-for-i keeps passwords only for the current process and the control plane shows a warning.
+
+Credential storage adapts to the Node runtime: Windows Node from PowerShell, `cmd`, or Git Bash uses Windows Credential Manager; macOS uses Keychain; Linux uses Secret Service; WSL uses the WSL distro's Linux Secret Service.
+
 ## Control Commands
 
 From an npm install or a git checkout build, these commands are the supported control entrypoints:
@@ -176,7 +180,7 @@ npm run release:patch -- --no-push
 ## Security Model
 
 - Credential-bearing direct tool arguments are blocked for connection creation/update flows.
-- Passwords are stored in keychain when available.
+- Passwords are stored in keychain when available; failed or missing keychain access falls back to process-only session storage with a visible control-plane warning.
 - Control plane is local-first (`127.0.0.1` by default).
 - Guarded policy profile is the default for operational safety.
 - Tool schemas are strict (`additionalProperties: false`) with runtime argument validation, including nested connection/action/filter/profile payloads.

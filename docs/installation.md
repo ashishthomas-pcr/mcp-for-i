@@ -6,6 +6,10 @@
 - On Linux: `libsecret` (for keychain via `keytar`)
 - Works from PowerShell, `cmd`, Git Bash, Bash, Zsh, and WSL shells
 
+WSL note: password persistence depends on a working Linux Secret Service inside the WSL distro. WSL does not automatically share Windows Credential Manager with Linux `keytar`. If the control plane reports session-only credential storage, use SSH keys, configure libsecret/Secret Service in WSL, or run MCP-for-i from Windows.
+
+Credential storage follows the Node runtime, not only the visible terminal: PowerShell, `cmd`, and Git Bash with Windows Node use Windows Credential Manager; WSL with Linux Node uses Linux Secret Service.
+
 ## Install
 1. Clone or copy this repo for git-checkout usage, or install globally for npm usage
 2. For git-checkout usage, install dependencies:

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import crypto from "crypto";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -13,6 +14,7 @@ import { runControlCommand } from "./controlplane/commands.js";
 
 const argv = process.argv.slice(2);
 const firstArg = (argv[0] || "").toLowerCase();
+const packageVersion = readPackageVersion();
 
 if (firstArg === "control") {
   await runControlCommand(argv.slice(1), {
@@ -22,13 +24,18 @@ if (firstArg === "control") {
   process.exit(0);
 }
 
+if (firstArg === "--version" || firstArg === "-v" || firstArg === "version") {
+  process.stdout.write(`${packageVersion}\n`);
+  process.exit(0);
+}
+
 if (firstArg === "--help" || firstArg === "-h" || firstArg === "help") {
   printHelp();
   process.exit(0);
 }
 
 const server = new Server(
-  { name: "mcp-for-i", version: "0.1.8" },
+  { name: "mcp-for-i", version: packageVersion },
   { capabilities: { tools: {} } }
 );
 
@@ -141,4 +148,15 @@ function printHelp() {
   process.stderr.write(`  mcp-for-i control status  Show control plane and background-service status\n`);
   process.stderr.write(`  mcp-for-i control enable  Enable background service for this platform\n`);
   process.stderr.write(`  mcp-for-i control disable Disable background service for this platform\n`);
+  process.stderr.write(`  mcp-for-i --version       Print package version\n`);
+}
+
+function readPackageVersion() {
+  try {
+    const packageJsonPath = fileURLToPath(new URL("../package.json", import.meta.url));
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+    return typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
 }

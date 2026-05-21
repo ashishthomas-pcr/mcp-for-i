@@ -20,6 +20,9 @@ Default settings (editable in the config file):
 
 ## Connections
 Connections are stored without passwords. Passwords are stored in OS keychain (or in-session fallback). Each connection can include optional `settings` overrides.
+The control plane health response and Overview page report whether password storage is persistent (`keychain`) or process-only (`session`).
+WSL users should note that Linux Secret Service is separate from Windows Credential Manager; if WSL has no working keychain, passwords must be re-entered after the process exits.
+Set `MCP_FOR_I_CREDENTIAL_STORE=session` to force process-only password storage even when a keychain is available.
 Connections can also define policy, for example:
 - `read-only`
 - `guarded` (default; approvals required for risky operations)
